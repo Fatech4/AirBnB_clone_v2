@@ -73,7 +73,7 @@ class HBNBCommand(cmd.Cmd):
                 pline = pline[2].strip()  # pline is now str
                 if pline:
                     # check for *args or **kwargs
-                    if pline[0] is '{' and pline[-1] is'}'\
+                    if pline[0] is '{' and pline[-1] is '}'\
                             and type(eval(pline)) is dict:
                         _args = pline
                     else:
@@ -114,16 +114,69 @@ class HBNBCommand(cmd.Cmd):
         pass
 
     def do_create(self, args):
-        """ Create an object of any class"""
+        """Create an object of any class"""
         if not args:
             print("** class name missing **")
             return
-        elif args not in HBNBCommand.classes:
+
+        # Split the arguments into class name and parameters
+        args_list = args.split()
+        class_name = args_list[0]
+        params = args_list[1:]
+
+        if class_name not in HBNBCommand.classes:
             print("** class doesn't exist **")
             return
-        new_instance = HBNBCommand.classes[args]()
+
+        # Create an empty dictionary for storing parameter key-value pairs
+        parameters = {}
+
+        # Parse and validate the parameters
+        for param in params:
+            # Split the parameter into key and value
+            key_value = param.split('=', 1)
+            if len(key_value) != 2:
+                print("** invalid parameter: {} **".format(param))
+                continue
+
+            key, value = key_value
+
+            # Replace underscores (_) with spaces in the value
+            value = value.replace('_', ' ')
+
+            # Handle different value types
+            if value.startswith('"') and value.endswith('"'):
+                # String value
+                value = value[1:-1].replace('"', '\"')
+            elif '.' in value:
+                # Float value
+                try:
+                    value = float(value)
+                except ValueError:
+                    print("** invalid parameter value: {} **".format(param))
+                    continue
+            else:
+                # Integer value
+                try:
+                    value = int(value)
+                except ValueError:
+                    print("** invalid parameter value: {} **".format(param))
+                    continue
+
+        # Store the key-value pair in the parameters dictionary
+            parameters[key] = value
+
+        # Create a new instance of the specified class with the parameters
+        new_instance = HBNBCommand.classes[class_name]()
+        instance = new_instance.to_dict()
+        obj = {}
+        obj.update(instance)
+        obj.update(parameters)
+        instance = HBNBCommand.classes[class_name](**obj)
+        # Save the instance and print its ID
         storage.save()
-        print(new_instance.id)
+        print(instance.id)
+        print(obj)
         storage.save()
 
     def help_create(self):
@@ -187,7 +240,7 @@ class HBNBCommand(cmd.Cmd):
         key = c_name + "." + c_id
 
         try:
-            del(storage.all()[key])
+            del (storage.all()[key])
             storage.save()
         except KeyError:
             print("** no instance found **")
@@ -319,6 +372,7 @@ class HBNBCommand(cmd.Cmd):
         """ Help information for the update class """
         print("Updates an object with new information")
         print("Usage: update <className> <id> <attName> <attVal>\n")
+
 
 if __name__ == "__main__":
     HBNBCommand().cmdloop()
